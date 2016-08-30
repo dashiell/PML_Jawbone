@@ -1,3 +1,3 @@
-# PML_Jawbone
+# PML - Jawbone
 
-https://dashiell.github.io/PML_Jawbone/
+Report: https://dashiell.github.io/PML_Jawbone/
