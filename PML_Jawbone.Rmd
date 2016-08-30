@@ -1,0 +1,112 @@
+---
+title: "PML Jawbone: Classification with Support Vector Machines, Recursive Partitioning, and Random Forests"
+author: "Dashiell Gough"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 1. Introduction
+This project uses data from several accelerometers to classify the manner in which exercises were performed. The goal is to predict the classe variable in the training set and minimize the out of sample error rate. The training data and testing data can be found at https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv and  https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv respectively.
+
+# 2. Preparation
+
+## 2.1 Libraries
+```{r}
+library(caret)
+library(rpart)
+library(e1071)
+library(randomForest)
+library(kernlab)
+```
+
+## 2.2 Importing 
+
+```{r}
+setwd("~/GitHub/PML")
+training = read.csv("pml-training.csv", header=TRUE, na.strings = c("NA", "","#DIV/0!"))
+testSet = read.csv("pml-testing.csv", header=TRUE) 
+```
+
+## 2.3 Cleaning 
+The first 7 variables are not related. 
+```{r}
+training <- training[, -(1:7)]
+testSet <- testSet[, -(1:7)]
+```
+
+Remove the na.strings from the datase
+```{r}
+training = training[, colSums(is.na(training)) == 0]
+```
+
+Use all the predictors in the training set for the test set. This is everything but classe (problem_id in test set)
+```{r}
+trNames = names(training)
+testSet = testSet[,c(trNames[-length(trNames)],names(testSet)[length(testSet)])] 
+```
+
+## 2.4 Partitioning
+Split the training data into 70% training and 30% validation
+
+```{r}
+inTraining = createDataPartition(training$classe, p=7/10, list=FALSE)
+
+trainSet = training[inTraining,]
+validSet = training[-inTraining,]
+
+rm(training); rm(inTraining) 
+```
+
+# 3 Comparing Supervised Classification with Support Vector Machines, Decision Trees, and Random Forests
+
+## 3.1  Cross-validation 
+For each model, 5-fold cross-validation is used in fitting the models. Cross validation has a lower variance than a single hold-out set by averaging over the set 5 different partitions.
+
+```{r}
+trainControl <- trainControl(method="cv", number=5, allowParallel=TRUE, verboseIter=FALSE)
+```
+
+## 3.2 Support Vector Machine - svm
+
+```{r}
+fitted_svm = train(classe ~., data=trainSet, method="svmRadial",  trControl=trainControl)
+pred_svm = predict(fitted_svm, validSet)
+confusionMatrix(validSet$classe, pred_svm)$overall[1]
+```
+The confusion matrix reports an accuracy of 92.4%. Although this is less than the random forest shown in 3.4, it yields the same predictions ```{r} predict(fitted_svm, testSet[,(1:(length(testSet)-1))]) ```
+
+## 3.3 Supervised classification using Recursive Partitioning (Decision Tree) - rpart
+```{r}
+fitted_rpart = train(classe ~., data=trainSet, method="rpart", trControl=trainControl)
+print(fitted_rpart, digits = 4)
+predict_rpart = predict(fitted_rpart, validSet)
+confusionMatrix(validSet$classe, predict_rpart)$overall[1]
+```
+
+## 3.4 Random Forest - rf
+Random forests are built by creating and combining decorrelated decision trees into a single model and can be used for classification or regression problems. It is based on the bagging technique, which averages noisy and unbiased models to create a model with low variance. The algorim works by creating a lot of random subsets of the sample set and creating decision trees for each subset. The trees are used to create a ranking of classifiers. For predictions on the validation or test set, the class prediction works by making predictions on each tree and choosing the prediction classified by the greatest number of trees. The algorithm can handle a large amount of features and don't suffer from overfitting.
+
+```{r}
+fitted_rf = train(classe ~., data=trainSet, method="rf", trControl=trainControl) 
+```
+The most important variables:
+```{r}
+varImp(fitted_rf)
+```
+
+```{r}
+predict_rf = predict(fitted_rf, validSet)
+confusionMatrix(validSet$classe, predict_rf)
+```
+
+Because the confusion matrix shows this algorithm yields the highest accuracy, we will use this in generating the predictions for the test set:
+```{r}
+predict(fitted_rf, testSet)
+```
+
+# 4 References
+Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013.
+
