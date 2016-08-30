@@ -181,7 +181,7 @@ confusionMatrix(validSet$classe, pred_svm)$overall[1]</code></pre>
 </div>
 </div>
 <div id="supervised-classification-using-recursive-partitioning-decision-tree---rpart" class="section level2">
-<h2>3.3 Supervised classification using Recursive Partitioning (Decision Tree) - rpart</h2>
+<h3>3.3 Supervised classification using Recursive Partitioning (Decision Tree) - rpart</h2>
 <pre class="r"><code>fitted_rpart = train(classe ~., data=trainSet, method=&quot;rpart&quot;, trControl=trainControl)
 print(fitted_rpart, digits = 4)</code></pre>
 <pre><code>## CART 
